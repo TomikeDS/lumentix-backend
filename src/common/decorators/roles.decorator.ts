@@ -3,6 +3,7 @@ import { SetMetadata } from '@nestjs/common';
 export enum Role {
   ORGANIZER = 'organizer',
   ATTENDEE = 'attendee',
+  SPONSOR = 'sponsor',
   ADMIN = 'admin',
 }
 

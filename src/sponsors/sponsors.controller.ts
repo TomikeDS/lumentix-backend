@@ -13,8 +13,11 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { SponsorsService } from './sponsors.service';
+import { ContributionsService } from './contributions.service';
 import { CreateSponsorTierDto } from './dto/create-sponsor-tier.dto';
 import { UpdateSponsorTierDto } from './dto/update-sponsor-tier.dto';
+import { ContributionIntentDto } from './dto/contribution-intent.dto';
+import { ConfirmContributionDto } from './dto/confirm-contribution.dto';
 import { Roles, Role } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { AuthenticatedRequest } from '../common/interfaces/authenticated-request.interface';
@@ -22,7 +25,12 @@ import { AuthenticatedRequest } from '../common/interfaces/authenticated-request
 @Controller('events/:eventId/tiers')
 @UseGuards(RolesGuard)
 export class SponsorsController {
-  constructor(private readonly sponsorsService: SponsorsService) {}
+  constructor(
+    private readonly sponsorsService: SponsorsService,
+    private readonly contributionsService: ContributionsService,
+  ) {}
+
+  // ── Tier management (organizer only) ─────────────────────────────────────
 
   @Post()
   @Roles(Role.ORGANIZER)
@@ -57,5 +65,30 @@ export class SponsorsController {
     @Req() req: AuthenticatedRequest,
   ) {
     return this.sponsorsService.deleteTier(id, req.user.id);
+  }
+
+  // ── Contribution flow (sponsor) ───────────────────────────────────────────
+
+  /**
+   * POST /events/:eventId/tiers/contribute/intent
+   * Sponsor selects a tier and receives the escrow wallet + amount to pay.
+   */
+  @Post('contribute/intent')
+  @Roles(Role.SPONSOR)
+  createIntent(
+    @Body() dto: ContributionIntentDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.contributionsService.createIntent(dto.tierId, req.user.id);
+  }
+
+  /**
+   * POST /events/:eventId/tiers/contribute/confirm
+   * Sponsor submits the on-chain transaction hash after broadcasting.
+   */
+  @Post('contribute/confirm')
+  @Roles(Role.SPONSOR)
+  confirmContribution(@Body() dto: ConfirmContributionDto) {
+    return this.contributionsService.confirmContribution(dto.transactionHash);
   }
 }
