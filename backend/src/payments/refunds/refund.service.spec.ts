@@ -1,8 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
 import { RefundService } from './refund.service';
+import { RefundCalculatorService } from './refund-calculator.service';
 import { Payment, PaymentStatus } from '../entities/payment.entity';
 import { RefundDispute } from './entities/refund-dispute.entity';
 import { TicketEntity } from '../../tickets/entities/ticket.entity';
@@ -38,6 +40,7 @@ const CONFIRMED_PAYMENT = {
   amount: 10,
   currency: 'XLM',
   status: PaymentStatus.CONFIRMED,
+  createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000), // 1h ago
 } as Payment;
 
 const USER_WITH_KEY = {
@@ -88,6 +91,18 @@ describe('RefundService', () => {
             calculateRefundAmount: jest.fn(),
             isRefundEligible: jest.fn(),
             generateVoucherCode: jest.fn(),
+        RefundCalculatorService,
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn((key: string, defaultValue?: number) => {
+              const config: Record<string, number> = {
+                FULL_REFUND_WINDOW_HOURS: 48,
+                PARTIAL_REFUND_RATE: 0.5,
+                REFUND_CUTOFF_HOURS: 24,
+              };
+              return config[key] ?? defaultValue;
+            }),
           },
         },
       ],
@@ -153,6 +168,7 @@ describe('RefundService', () => {
     beforeEach(() => {
       eventsRepo.findOne.mockResolvedValue(CANCELLED_EVENT);
       paymentsRepo.find.mockResolvedValue([CONFIRMED_PAYMENT]);
+      paymentsRepo.findOne.mockResolvedValue(CONFIRMED_PAYMENT);
       escrowService.decryptEscrowSecret.mockResolvedValue('raw-secret');
       usersRepo.findOne.mockResolvedValue(USER_WITH_KEY);
       stellarService.sendPayment.mockResolvedValue({
@@ -219,13 +235,17 @@ describe('RefundService', () => {
       paymentsRepo.find.mockResolvedValue([
         { ...CONFIRMED_PAYMENT, amount: 0 },
       ]);
+      paymentsRepo.findOne.mockResolvedValue({
+        ...CONFIRMED_PAYMENT,
+        amount: 0,
+      } as Payment);
       escrowService.decryptEscrowSecret.mockResolvedValue('raw-secret');
       usersRepo.findOne.mockResolvedValue(USER_WITH_KEY);
 
       const results = await service.refundEvent('event-1');
 
       expect(results[0].success).toBe(false);
-      expect(results[0].error).toMatch(/partial or zero/i);
+      expect(results[0].error).toMatch(/Invalid payment amount/i);
       expect(stellarService.sendPayment).not.toHaveBeenCalled();
     });
 
@@ -234,6 +254,10 @@ describe('RefundService', () => {
       paymentsRepo.find.mockResolvedValue([
         { ...CONFIRMED_PAYMENT, amount: -5 },
       ]);
+      paymentsRepo.findOne.mockResolvedValue({
+        ...CONFIRMED_PAYMENT,
+        amount: -5,
+      } as Payment);
       escrowService.decryptEscrowSecret.mockResolvedValue('raw-secret');
       usersRepo.findOne.mockResolvedValue(USER_WITH_KEY);
 
@@ -250,6 +274,7 @@ describe('RefundService', () => {
     it('returns failure result and does not call sendPayment', async () => {
       eventsRepo.findOne.mockResolvedValue(CANCELLED_EVENT);
       paymentsRepo.find.mockResolvedValue([CONFIRMED_PAYMENT]);
+      paymentsRepo.findOne.mockResolvedValue(CONFIRMED_PAYMENT);
       escrowService.decryptEscrowSecret.mockResolvedValue('raw-secret');
       usersRepo.findOne.mockResolvedValue({
         ...USER_WITH_KEY,
@@ -259,7 +284,7 @@ describe('RefundService', () => {
       const results = await service.refundEvent('event-1');
 
       expect(results[0].success).toBe(false);
-      expect(results[0].error).toMatch(/no Stellar public key/i);
+      expect(results[0].error).toMatch(/no Stellar wallet linked/i);
       expect(stellarService.sendPayment).not.toHaveBeenCalled();
     });
   });
@@ -282,9 +307,20 @@ describe('RefundService', () => {
       paymentsRepo.find.mockResolvedValue([CONFIRMED_PAYMENT, payment2]);
       escrowService.decryptEscrowSecret.mockResolvedValue('raw-secret');
 
+      // processSingleRefund calls checkRefundEligibility internally, which
+      // does its own paymentsRepo.findOne + usersRepo.findOne + eventsRepo.findOne.
+      // Then processSingleRefund does ANOTHER usersRepo.findOne for refund processing.
+      // 4 users lookups: pay-1 eligibility + processing, pay-2 eligibility + processing
       usersRepo.findOne
-        .mockResolvedValueOnce(USER_WITH_KEY) // pay-1 user found
-        .mockResolvedValueOnce(user2); // pay-2 user found
+        .mockResolvedValueOnce(USER_WITH_KEY) // pay-1 eligibility check
+        .mockResolvedValueOnce(USER_WITH_KEY) // pay-1 refund processing
+        .mockResolvedValueOnce(user2)         // pay-2 eligibility check
+        .mockResolvedValueOnce(user2);        // pay-2 refund processing
+
+      // paymentsRepo.findOne for eligibility checks (returns payment object)
+      paymentsRepo.findOne
+        .mockResolvedValueOnce(CONFIRMED_PAYMENT) // pay-1 eligibility
+        .mockResolvedValueOnce(payment2);          // pay-2 eligibility
 
       stellarService.sendPayment
         .mockRejectedValueOnce(new Error('Horizon timeout')) // pay-1 fails
@@ -359,7 +395,7 @@ describe('RefundService', () => {
       const result = await service.refundSinglePayment('pay-1');
 
       expect(result.success).toBe(false);
-      expect(result.error).toMatch(/no Stellar public key/i);
+      expect(result.error).toMatch(/no Stellar wallet linked/i);
       expect(stellarService.sendPayment).not.toHaveBeenCalled();
     });
 

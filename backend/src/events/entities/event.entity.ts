@@ -4,8 +4,11 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  ManyToMany,
+  JoinTable,
 } from 'typeorm';
 import { CancellationReason } from '../../payments/refunds/enums';
+import { Category } from '../../categories/entities/category.entity';
 
 export enum EventStatus {
   DRAFT = 'draft',
@@ -58,6 +61,9 @@ export class Event {
 
   @Column()
   organizerId: string;
+
+  @Column({ nullable: true, type: 'uuid' })
+  seriesId: string | null;
 
   @Column({
     type: 'enum',
@@ -131,6 +137,21 @@ export class Event {
    */
   @Column({ type: 'timestamp', nullable: true })
   cancelledAt: Date | null;
+  @ManyToMany(() => Category, (c) => c.events)
+  @JoinTable({ name: 'event_categories' })
+  categories: Category[];
+
+  /**
+   * Timestamp when the escrow account was merged (closed) after a full refund.
+   * NULL means the account has not been merged yet.
+   */
+  @Column({ type: 'timestamp', nullable: true, default: null })
+  mergedAt: Date | null;
+   * Optional webhook URL for outbound payment status notifications.
+   * When set, a signed POST request is sent on each payment status transition.
+   */
+  @Column({ type: 'varchar', nullable: true, default: null })
+  webhookUrl: string | null;
 
   @CreateDateColumn()
   createdAt: Date;
