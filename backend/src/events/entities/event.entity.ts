@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { CancellationReason } from '../../payments/refunds/enums';
 
 export enum EventStatus {
   DRAFT = 'draft',
@@ -110,6 +111,26 @@ export class Event {
     default: EventAgeRestriction.NONE,
   })
   ageRestriction: EventAgeRestriction;
+
+  /**
+   * Reason for event cancellation (if applicable).
+   * Drives refund policy determination.
+   */
+  @Column({ type: 'varchar', nullable: true })
+  cancellationReason: CancellationReason | null;
+
+  /**
+   * Additional context about the cancellation.
+   * Stored as JSONB for flexible metadata.
+   */
+  @Column({ type: 'jsonb', nullable: true, default: null })
+  cancellationDetails: Record<string, any> | null;
+
+  /**
+   * Timestamp when event was cancelled.
+   */
+  @Column({ type: 'timestamp', nullable: true })
+  cancelledAt: Date | null;
 
   @CreateDateColumn()
   createdAt: Date;

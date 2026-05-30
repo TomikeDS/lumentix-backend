@@ -4,6 +4,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { RefundService } from './refund.service';
 import { Payment, PaymentStatus } from '../entities/payment.entity';
+import { RefundDispute } from './entities/refund-dispute.entity';
 import { TicketEntity } from '../../tickets/entities/ticket.entity';
 import { Event, EventStatus } from '../../events/entities/event.entity';
 import { User } from '../../users/entities/user.entity';
@@ -11,6 +12,7 @@ import { StellarService } from '../../stellar/stellar.service';
 import { AuditService } from '../../audit/audit.service';
 import { EscrowService } from '../services/escrow.service';
 import { NotificationService } from '../../notifications/notification.service';
+import { RefundPolicyService } from './services/refund-policy.service';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -60,6 +62,7 @@ describe('RefundService', () => {
       providers: [
         RefundService,
         { provide: getRepositoryToken(Payment), useValue: mockRepo() },
+        { provide: getRepositoryToken(RefundDispute), useValue: mockRepo() },
         { provide: getRepositoryToken(TicketEntity), useValue: mockRepo() },
         { provide: getRepositoryToken(Event), useValue: mockRepo() },
         { provide: getRepositoryToken(User), useValue: mockRepo() },
@@ -78,6 +81,14 @@ describe('RefundService', () => {
         {
           provide: NotificationService,
           useValue: { queueRefundEmail: jest.fn() },
+        },
+        {
+          provide: RefundPolicyService,
+          useValue: {
+            calculateRefundAmount: jest.fn(),
+            isRefundEligible: jest.fn(),
+            generateVoucherCode: jest.fn(),
+          },
         },
       ],
     }).compile();

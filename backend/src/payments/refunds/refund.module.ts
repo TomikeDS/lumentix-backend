@@ -4,22 +4,24 @@ import { Payment } from '../entities/payment.entity';
 import { TicketEntity } from '../../tickets/entities/ticket.entity';
 import { Event } from '../../events/entities/event.entity';
 import { User } from '../../users/entities/user.entity';
+import { RefundDispute } from './entities/refund-dispute.entity';
 import { StellarModule } from '../../stellar/stellar.module';
 import { AuditModule } from '../../audit/audit.module';
 import { EscrowModule } from '../escrow.module';
 import { NotificationModule } from '../../notifications/notification.module';
 import { RefundService } from './refund.service';
+import { RefundPolicyService } from './services/refund-policy.service';
 import { RefundController } from './refund.controller';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Payment, TicketEntity, Event, User]),
+    TypeOrmModule.forFeature([Payment, TicketEntity, Event, User, RefundDispute]),
     StellarModule,
     AuditModule,
     EscrowModule,
     NotificationModule,
   ],
-  providers: [RefundService],
+  providers: [RefundService, RefundPolicyService],
   controllers: [RefundController],
   exports: [RefundService],
 })
