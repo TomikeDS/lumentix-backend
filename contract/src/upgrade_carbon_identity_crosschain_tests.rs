@@ -1,3 +1,4 @@
+#![allow(warnings)]
 #![cfg(test)]
 
 use crate::lumentix_contract::{LumentixContract, LumentixContractClient};
@@ -52,12 +53,7 @@ fn test_configure_upgrade_governance_unauthorized() {
     let fake_admin = Address::generate(&env);
     let members = Vec::new(&env);
 
-    let result = client.try_configure_upgrade_governance(
-        &fake_admin,
-        &604800u64,
-        &60u32,
-        &members,
-    );
+    let result = client.try_configure_upgrade_governance(&fake_admin, &604800u64, &60u32, &members);
     assert!(result.is_err());
 }
 
@@ -69,12 +65,8 @@ fn test_configure_upgrade_governance_empty_members() {
     let (admin, client) = setup_contract(&env);
 
     let empty_members = Vec::new(&env);
-    let result = client.try_configure_upgrade_governance(
-        &admin,
-        &604800u64,
-        &60u32,
-        &empty_members,
-    );
+    let result =
+        client.try_configure_upgrade_governance(&admin, &604800u64, &60u32, &empty_members);
     assert!(result.is_err());
 }
 
@@ -376,13 +368,8 @@ fn test_purchase_carbon_offset() {
 
     client.calculate_carbon_footprint(&event_id, &5000u64, &1000u64, &20u64);
 
-    let purchase_id = client.purchase_carbon_offset(
-        &purchaser,
-        &event_id,
-        &100000i128,
-        &50000i128,
-        &project_id,
-    );
+    let purchase_id =
+        client.purchase_carbon_offset(&purchaser, &event_id, &100000i128, &50000i128, &project_id);
     assert_eq!(purchase_id, 1);
 
     let purchase = client.get_carbon_offset_purchase(&purchase_id);
@@ -406,13 +393,8 @@ fn test_purchase_carbon_offset_zero_amount_fails() {
     let purchaser = Address::generate(&env);
     let project_id = String::from_str(&env, "PROJ-001");
 
-    let result = client.try_purchase_carbon_offset(
-        &purchaser,
-        &event_id,
-        &0i128,
-        &50000i128,
-        &project_id,
-    );
+    let result =
+        client.try_purchase_carbon_offset(&purchaser, &event_id, &0i128, &50000i128, &project_id);
     assert!(result.is_err());
 }
 
@@ -458,13 +440,7 @@ fn test_track_environmental_impact() {
 
     let purchaser = Address::generate(&env);
     let project_id = String::from_str(&env, "PROJ-002");
-    client.purchase_carbon_offset(
-        &purchaser,
-        &event_id,
-        &200000i128,
-        &100000i128,
-        &project_id,
-    );
+    client.purchase_carbon_offset(&purchaser, &event_id, &200000i128, &100000i128, &project_id);
 
     let impact_final = client.track_environmental_impact(&event_id);
     assert_eq!(impact_final.total_offset_kg, 200000);
@@ -510,21 +486,9 @@ fn test_multiple_carbon_offset_purchases() {
 
     client.calculate_carbon_footprint(&event_id, &1000u64, &500u64, &10u64);
 
-    client.purchase_carbon_offset(
-        &purchaser,
-        &event_id,
-        &50000i128,
-        &25000i128,
-        &project_id,
-    );
+    client.purchase_carbon_offset(&purchaser, &event_id, &50000i128, &25000i128, &project_id);
 
-    client.purchase_carbon_offset(
-        &purchaser,
-        &event_id,
-        &30000i128,
-        &15000i128,
-        &project_id,
-    );
+    client.purchase_carbon_offset(&purchaser, &event_id, &30000i128, &15000i128, &project_id);
 
     let impact = client.track_environmental_impact(&event_id);
     assert_eq!(impact.total_purchases, 2);
@@ -926,11 +890,7 @@ fn create_ticket(env: &Env, client: &LumentixContractClient) -> (u64, u64, Addre
         &max_tickets,
     );
 
-    client.update_event_status(
-        &event_id,
-        &crate::types::EventStatus::Published,
-        &organizer,
-    );
+    client.update_event_status(&event_id, &crate::types::EventStatus::Published, &organizer);
 
     let buyer = Address::generate(env);
     let ticket_id = client.purchase_ticket(&buyer, &event_id, &ticket_price);
@@ -977,9 +937,8 @@ fn test_initiate_cross_chain_transfer() {
     let (event_id, ticket_id, buyer) = create_ticket(&env, &client);
     let recipient = Address::generate(&env);
 
-    let transfer_id = client.initiate_cross_chain_transfer(
-        &buyer, &ticket_id, &event_id, &chain, &recipient,
-    );
+    let transfer_id =
+        client.initiate_cross_chain_transfer(&buyer, &ticket_id, &event_id, &chain, &recipient);
 
     assert_eq!(transfer_id, 1);
 
@@ -1027,13 +986,8 @@ fn test_initiate_cross_chain_transfer_not_owner() {
     let recipient = Address::generate(&env);
     let not_owner = Address::generate(&env);
 
-    let result = client.try_initiate_cross_chain_transfer(
-        &not_owner,
-        &ticket_id,
-        &event_id,
-        &chain,
-        &recipient,
-    );
+    let result = client
+        .try_initiate_cross_chain_transfer(&not_owner, &ticket_id, &event_id, &chain, &recipient);
     assert!(result.is_err());
 }
 
@@ -1050,9 +1004,8 @@ fn test_validate_bridge_transaction() {
     let (event_id, ticket_id, buyer) = create_ticket(&env, &client);
     let recipient = Address::generate(&env);
 
-    let transfer_id = client.initiate_cross_chain_transfer(
-        &buyer, &ticket_id, &event_id, &chain, &recipient,
-    );
+    let transfer_id =
+        client.initiate_cross_chain_transfer(&buyer, &ticket_id, &event_id, &chain, &recipient);
 
     let tx_hash = String::from_str(&env, "0xabc123...");
     client.validate_bridge_transaction(&admin, &transfer_id, &tx_hash, &123456u64);
@@ -1079,19 +1032,13 @@ fn test_validate_bridge_transaction_already_completed() {
     let (event_id, ticket_id, buyer) = create_ticket(&env, &client);
     let recipient = Address::generate(&env);
 
-    let transfer_id = client.initiate_cross_chain_transfer(
-        &buyer, &ticket_id, &event_id, &chain, &recipient,
-    );
+    let transfer_id =
+        client.initiate_cross_chain_transfer(&buyer, &ticket_id, &event_id, &chain, &recipient);
 
     let tx_hash = String::from_str(&env, "0xabc123...");
     client.validate_bridge_transaction(&admin, &transfer_id, &tx_hash, &123456u64);
 
-    let result = client.try_validate_bridge_transaction(
-        &admin,
-        &transfer_id,
-        &tx_hash,
-        &123457u64,
-    );
+    let result = client.try_validate_bridge_transaction(&admin, &transfer_id, &tx_hash, &123457u64);
     assert!(result.is_err());
 }
 
@@ -1108,9 +1055,8 @@ fn test_complete_cross_chain_transfer() {
     let (event_id, ticket_id, buyer) = create_ticket(&env, &client);
     let recipient = Address::generate(&env);
 
-    let transfer_id = client.initiate_cross_chain_transfer(
-        &buyer, &ticket_id, &event_id, &chain, &recipient,
-    );
+    let transfer_id =
+        client.initiate_cross_chain_transfer(&buyer, &ticket_id, &event_id, &chain, &recipient);
 
     let tx_hash = String::from_str(&env, "0xdef456...");
     client.validate_bridge_transaction(&admin, &transfer_id, &tx_hash, &789012u64);
@@ -1140,9 +1086,8 @@ fn test_complete_cross_chain_transfer_not_validated() {
     let (event_id, ticket_id, buyer) = create_ticket(&env, &client);
     let recipient = Address::generate(&env);
 
-    let transfer_id = client.initiate_cross_chain_transfer(
-        &buyer, &ticket_id, &event_id, &chain, &recipient,
-    );
+    let transfer_id =
+        client.initiate_cross_chain_transfer(&buyer, &ticket_id, &event_id, &chain, &recipient);
 
     let result = client.try_complete_cross_chain_transfer(&buyer, &transfer_id);
     assert!(result.is_err());
@@ -1179,13 +1124,8 @@ fn test_initiate_transfer_when_bridge_paused() {
 
     client.set_bridge_paused(&admin, &true);
 
-    let result = client.try_initiate_cross_chain_transfer(
-        &buyer,
-        &ticket_id,
-        &event_id,
-        &chain,
-        &recipient,
-    );
+    let result =
+        client.try_initiate_cross_chain_transfer(&buyer, &ticket_id, &event_id, &chain, &recipient);
     assert!(result.is_err());
 }
 
@@ -1202,9 +1142,7 @@ fn test_cross_chain_transfer_init_event() {
     let (event_id, ticket_id, buyer) = create_ticket(&env, &client);
     let recipient = Address::generate(&env);
 
-    client.initiate_cross_chain_transfer(
-        &buyer, &ticket_id, &event_id, &chain, &recipient,
-    );
+    client.initiate_cross_chain_transfer(&buyer, &ticket_id, &event_id, &chain, &recipient);
 
     let events = env.events().all();
     let mut found = false;
@@ -1234,9 +1172,8 @@ fn test_cross_chain_transfer_complete_event() {
     let (event_id, ticket_id, buyer) = create_ticket(&env, &client);
     let recipient = Address::generate(&env);
 
-    let transfer_id = client.initiate_cross_chain_transfer(
-        &buyer, &ticket_id, &event_id, &chain, &recipient,
-    );
+    let transfer_id =
+        client.initiate_cross_chain_transfer(&buyer, &ticket_id, &event_id, &chain, &recipient);
 
     let tx_hash = String::from_str(&env, "0xfullflow...");
     client.validate_bridge_transaction(&admin, &transfer_id, &tx_hash, &999999u64);
