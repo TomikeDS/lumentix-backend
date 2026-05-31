@@ -2,7 +2,7 @@ use crate::error::LumentixError;
 use crate::types::{
     AccessibilityBooking, AccessibilityInventory, BridgeTransaction, CarbonFootprint,
     CarbonOffsetPurchase, CrossChainTransfer, CurrencyConfig, EnvironmentalImpact, Event,
-    EventReview, IdentityCredential, IdentityProvider, InsurancePool, InsurancePolicy,
+    EventReview, IdentityCredential, IdentityProvider, InsurancePolicy, InsurancePool,
     OrganizerReputation, Seat, Ticket, TicketTransferRecord, UpgradeGovernanceConfig,
     UpgradeProposal, UpgradeVote, VenueLayout, VipTier, WaitlistOffer, INSTANCE_LIFETIME,
     PERSISTENT_LIFETIME,
@@ -297,10 +297,7 @@ pub fn append_ticket_transfer_history(env: &Env, ticket_id: u64, record: TicketT
 }
 
 /// Get the full transfer history for a ticket
-pub fn get_ticket_transfer_history(
-    env: &Env,
-    ticket_id: u64,
-) -> Vec<TicketTransferRecord> {
+pub fn get_ticket_transfer_history(env: &Env, ticket_id: u64) -> Vec<TicketTransferRecord> {
     let key = (TRANSFER_HISTORY_PREFIX, ticket_id);
     let history: Vec<TicketTransferRecord> = env
         .storage()
@@ -327,7 +324,11 @@ pub fn set_vip_tier(env: &Env, event_id: u64, tier_name: &String, tier: &VipTier
         .extend_ttl(&key, PERSISTENT_LIFETIME, PERSISTENT_LIFETIME);
 }
 
-pub fn get_vip_tier(env: &Env, event_id: u64, tier_name: &String) -> Result<VipTier, LumentixError> {
+pub fn get_vip_tier(
+    env: &Env,
+    event_id: u64,
+    tier_name: &String,
+) -> Result<VipTier, LumentixError> {
     let key = (VIP_TIER_PREFIX, event_id, tier_name.clone());
     let tier = env
         .storage()
@@ -357,7 +358,10 @@ pub fn set_accessibility_inventory(env: &Env, event_id: u64, inv: &Accessibility
         .extend_ttl(&key, PERSISTENT_LIFETIME, PERSISTENT_LIFETIME);
 }
 
-pub fn get_accessibility_inventory(env: &Env, event_id: u64) -> Result<AccessibilityInventory, LumentixError> {
+pub fn get_accessibility_inventory(
+    env: &Env,
+    event_id: u64,
+) -> Result<AccessibilityInventory, LumentixError> {
     let key = (ACCESSIBILITY_INV_PREFIX, event_id);
     let inv = env
         .storage()
@@ -371,7 +375,11 @@ pub fn get_accessibility_inventory(env: &Env, event_id: u64) -> Result<Accessibi
 }
 
 pub fn get_next_accessibility_booking_id(env: &Env) -> u64 {
-    let id = env.storage().instance().get(&ACC_BOOKING_COUNTER).unwrap_or(1);
+    let id = env
+        .storage()
+        .instance()
+        .get(&ACC_BOOKING_COUNTER)
+        .unwrap_or(1);
     env.storage()
         .instance()
         .extend_ttl(INSTANCE_LIFETIME, INSTANCE_LIFETIME);
@@ -394,7 +402,10 @@ pub fn set_accessibility_booking(env: &Env, booking_id: u64, booking: &Accessibi
         .extend_ttl(&key, PERSISTENT_LIFETIME, PERSISTENT_LIFETIME);
 }
 
-pub fn get_accessibility_booking(env: &Env, booking_id: u64) -> Result<AccessibilityBooking, LumentixError> {
+pub fn get_accessibility_booking(
+    env: &Env,
+    booking_id: u64,
+) -> Result<AccessibilityBooking, LumentixError> {
     let key = (ACCESSIBILITY_BOOKING_PREFIX, booking_id);
     let booking = env
         .storage()
@@ -582,7 +593,11 @@ pub fn set_waitlist_reserved(env: &Env, event_id: u64, reserved: u32) {
 
 /// Get next insurance policy ID
 pub fn get_next_insurance_policy_id(env: &Env) -> u64 {
-    let id = env.storage().instance().get(&INSURANCE_POLICY_ID_COUNTER).unwrap_or(1);
+    let id = env
+        .storage()
+        .instance()
+        .get(&INSURANCE_POLICY_ID_COUNTER)
+        .unwrap_or(1);
     env.storage()
         .instance()
         .extend_ttl(INSTANCE_LIFETIME, INSTANCE_LIFETIME);
@@ -610,10 +625,7 @@ pub fn set_insurance_policy(env: &Env, policy_id: u64, policy: &InsurancePolicy)
 }
 
 /// Get insurance policy
-pub fn get_insurance_policy(
-    env: &Env,
-    policy_id: u64,
-) -> Result<InsurancePolicy, LumentixError> {
+pub fn get_insurance_policy(env: &Env, policy_id: u64) -> Result<InsurancePolicy, LumentixError> {
     let key = (INSURANCE_POLICY_PREFIX, policy_id);
     let policy = env
         .storage()
@@ -636,11 +648,17 @@ pub fn get_insurance_policy_by_ticket(
     let policy_id = get_next_insurance_policy_id(env);
     for i in 1..policy_id {
         let key = (INSURANCE_POLICY_PREFIX, i);
-        if let Some(policy) = env.storage().persistent().get::<(&str, u64), InsurancePolicy>(&key) {
+        if let Some(policy) = env
+            .storage()
+            .persistent()
+            .get::<(&str, u64), InsurancePolicy>(&key)
+        {
             if policy.ticket_id == ticket_id {
-                env.storage()
-                    .persistent()
-                    .extend_ttl(&key, PERSISTENT_LIFETIME, PERSISTENT_LIFETIME);
+                env.storage().persistent().extend_ttl(
+                    &key,
+                    PERSISTENT_LIFETIME,
+                    PERSISTENT_LIFETIME,
+                );
                 return Ok(policy);
             }
         }
@@ -650,15 +668,15 @@ pub fn get_insurance_policy_by_ticket(
 
 /// Get insurance pool
 pub fn get_insurance_pool(env: &Env) -> InsurancePool {
-    let pool: InsurancePool = env
-        .storage()
-        .instance()
-        .get(&INSURANCE_POOL)
-        .unwrap_or(InsurancePool {
-            total_balance: 0,
-            total_policies: 0,
-            total_claims_paid: 0,
-        });
+    let pool: InsurancePool =
+        env.storage()
+            .instance()
+            .get(&INSURANCE_POOL)
+            .unwrap_or(InsurancePool {
+                total_balance: 0,
+                total_policies: 0,
+                total_claims_paid: 0,
+            });
     env.storage()
         .instance()
         .extend_ttl(INSTANCE_LIFETIME, INSTANCE_LIFETIME);
@@ -774,22 +792,19 @@ pub fn set_organizer_reputation(env: &Env, organizer: &Address, rep: &OrganizerR
 }
 
 /// Fetch an organizer's reputation record
-pub fn get_organizer_reputation(
-    env: &Env,
-    organizer: &Address,
-) -> OrganizerReputation {
+pub fn get_organizer_reputation(env: &Env, organizer: &Address) -> OrganizerReputation {
     let key = (ORGANIZER_REPUTATION_PREFIX, organizer.clone());
-    let rep: OrganizerReputation = env
-        .storage()
-        .persistent()
-        .get(&key)
-        .unwrap_or(OrganizerReputation {
-            organizer: organizer.clone(),
-            reputation_score: 0,
-            average_rating_x100: 0,
-            total_reviews: 0,
-            total_ratings_sum: 0,
-        });
+    let rep: OrganizerReputation =
+        env.storage()
+            .persistent()
+            .get(&key)
+            .unwrap_or(OrganizerReputation {
+                organizer: organizer.clone(),
+                reputation_score: 0,
+                average_rating_x100: 0,
+                total_reviews: 0,
+                total_ratings_sum: 0,
+            });
     if env.storage().persistent().has(&key) {
         env.storage()
             .persistent()
@@ -897,11 +912,7 @@ pub fn set_upgrade_vote(env: &Env, proposal_id: u64, voter: &Address, vote: &Upg
         .extend_ttl(&key, PERSISTENT_LIFETIME, PERSISTENT_LIFETIME);
 }
 
-pub fn get_upgrade_vote(
-    env: &Env,
-    proposal_id: u64,
-    voter: &Address,
-) -> Option<UpgradeVote> {
+pub fn get_upgrade_vote(env: &Env, proposal_id: u64, voter: &Address) -> Option<UpgradeVote> {
     let key = (UPGRADE_VOTE_PREFIX, proposal_id, voter.clone());
     let vote: Option<UpgradeVote> = env.storage().persistent().get(&key);
     if vote.is_some() {
@@ -996,18 +1007,18 @@ pub fn set_environmental_impact(env: &Env, event_id: u64, impact: &Environmental
 
 pub fn get_environmental_impact(env: &Env, event_id: u64) -> EnvironmentalImpact {
     let key = (ENVIRONMENTAL_IMPACT_PREFIX, event_id);
-    let impact: EnvironmentalImpact = env
-        .storage()
-        .persistent()
-        .get(&key)
-        .unwrap_or(EnvironmentalImpact {
-            event_id,
-            total_footprint_kg: 0,
-            total_offset_kg: 0,
-            net_impact_kg: 0,
-            total_purchases: 0,
-            neutral_status: false,
-        });
+    let impact: EnvironmentalImpact =
+        env.storage()
+            .persistent()
+            .get(&key)
+            .unwrap_or(EnvironmentalImpact {
+                event_id,
+                total_footprint_kg: 0,
+                total_offset_kg: 0,
+                net_impact_kg: 0,
+                total_purchases: 0,
+                neutral_status: false,
+            });
     if env.storage().persistent().has(&key) {
         env.storage()
             .persistent()
@@ -1077,7 +1088,11 @@ pub fn set_identity_credential_by_subject(
     provider: &IdentityProvider,
     credential_id: u64,
 ) {
-    let key = (IDENTITY_CREDENTIAL_BY_SUBJECT_PREFIX, subject.clone(), provider.clone());
+    let key = (
+        IDENTITY_CREDENTIAL_BY_SUBJECT_PREFIX,
+        subject.clone(),
+        provider.clone(),
+    );
     env.storage().persistent().set(&key, &credential_id);
     env.storage()
         .persistent()
@@ -1089,7 +1104,11 @@ pub fn get_identity_credential_by_subject(
     subject: &Address,
     provider: &IdentityProvider,
 ) -> Option<u64> {
-    let key = (IDENTITY_CREDENTIAL_BY_SUBJECT_PREFIX, subject.clone(), provider.clone());
+    let key = (
+        IDENTITY_CREDENTIAL_BY_SUBJECT_PREFIX,
+        subject.clone(),
+        provider.clone(),
+    );
     let id: Option<u64> = env.storage().persistent().get(&key);
     if id.is_some() {
         env.storage()
@@ -1176,10 +1195,7 @@ pub fn set_bridge_transaction(env: &Env, tx_hash: &String, tx: &BridgeTransactio
         .extend_ttl(&key, PERSISTENT_LIFETIME, PERSISTENT_LIFETIME);
 }
 
-pub fn get_bridge_transaction(
-    env: &Env,
-    tx_hash: &String,
-) -> Option<BridgeTransaction> {
+pub fn get_bridge_transaction(env: &Env, tx_hash: &String) -> Option<BridgeTransaction> {
     let key = (BRIDGE_TRANSACTION_PREFIX, tx_hash.clone());
     let tx: Option<BridgeTransaction> = env.storage().persistent().get(&key);
     if tx.is_some() {
@@ -1198,7 +1214,10 @@ pub fn set_bridge_paused(env: &Env, paused: bool) {
 }
 
 pub fn is_bridge_paused(env: &Env) -> bool {
-    env.storage().instance().get(&BRIDGE_PAUSED_KEY).unwrap_or(false)
+    env.storage()
+        .instance()
+        .get(&BRIDGE_PAUSED_KEY)
+        .unwrap_or(false)
 }
 
 pub fn register_supported_chain(env: &Env, chain: &String, supported: bool) {

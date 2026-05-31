@@ -1,3 +1,4 @@
+#![allow(warnings)]
 #![allow(irrefutable_let_patterns)]
 
 use crate::error::LumentixError;
@@ -6250,14 +6251,15 @@ fn test_event_metadata_updated_successive_updates_emit_independent_events_with_f
     );
 
     // Both emissions must be present – collect all "evtmeta" events in order
-    let mut timestamps: Vec<u64> = Vec::new(&env);
+    extern crate alloc;
+    let mut timestamps: alloc::vec::Vec<u64> = alloc::vec::Vec::new();
     for xdr_event in env.events().all().events() {
         if let xdr::ContractEventBody::V0(body) = &xdr_event.body {
             if let Some(xdr::ScVal::Symbol(sym)) = body.topics.first() {
                 if sym.as_slice() == b"evtmeta" {
                     if let xdr::ScVal::Vec(Some(fields)) = &body.data {
                         if let xdr::ScVal::U64(ts) = &fields[2] {
-                            timestamps.push_back(*ts);
+                            timestamps.push(*ts);
                         }
                     }
                 }
@@ -6475,7 +6477,8 @@ fn test_event_capacity_changed_successive_calls_emit_independent_events_with_cor
     client.set_event_capacity(&organizer, &event_id, &150u32);
 
     // Collect all "capchng" events in emission order
-    let mut pairs: Vec<(u32, u32)> = Vec::new(&env); // (old, new)
+    extern crate alloc;
+    let mut pairs: alloc::vec::Vec<(u32, u32)> = alloc::vec::Vec::new(); // (old, new)
     for xdr_event in env.events().all().events() {
         if let xdr::ContractEventBody::V0(body) = &xdr_event.body {
             if let Some(xdr::ScVal::Symbol(sym)) = body.topics.first() {
@@ -6489,7 +6492,7 @@ fn test_event_capacity_changed_successive_calls_emit_independent_events_with_cor
                             xdr::ScVal::U32(v) => *v,
                             _ => 0,
                         };
-                        pairs.push_back((old, new));
+                        pairs.push((old, new));
                     }
                 }
             }

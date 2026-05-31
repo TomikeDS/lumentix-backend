@@ -73,7 +73,12 @@ impl PlatformFeeUpdated {
 pub struct PlatformFeeRecipientUpdated;
 
 impl PlatformFeeRecipientUpdated {
-    pub fn emit(env: &Env, admin_executor: Address, old_recipient: Address, new_recipient: Address) {
+    pub fn emit(
+        env: &Env,
+        admin_executor: Address,
+        old_recipient: Address,
+        new_recipient: Address,
+    ) {
         env.events().publish(
             (symbol_short!("feerecip"),),
             (admin_executor, old_recipient, new_recipient),
@@ -245,10 +250,8 @@ pub struct BatchTicketsTransferred;
 
 impl BatchTicketsTransferred {
     pub fn emit(env: &Env, from: Address, to: Address, ticket_ids: Vec<u64>) {
-        env.events().publish(
-            (symbol_short!("batchtrn"),),
-            (from, to, ticket_ids),
-        );
+        env.events()
+            .publish((symbol_short!("batchtrn"),), (from, to, ticket_ids));
     }
 }
 
@@ -282,10 +285,8 @@ pub struct WaitlistJoined;
 
 impl WaitlistJoined {
     pub fn emit(env: &Env, event_id: u64, buyer: Address, position: u32) {
-        env.events().publish(
-            (symbol_short!("wjoin"),),
-            (event_id, buyer, position),
-        );
+        env.events()
+            .publish((symbol_short!("wjoin"),), (event_id, buyer, position));
     }
 }
 
@@ -509,7 +510,13 @@ impl AccessibilityInventoryUpdated {
 pub struct AccessibilityBooked;
 
 impl AccessibilityBooked {
-    pub fn emit(env: &Env, booking_id: u64, event_id: u64, attendee: Address, accommodation_type: String) {
+    pub fn emit(
+        env: &Env,
+        booking_id: u64,
+        event_id: u64,
+        attendee: Address,
+        accommodation_type: String,
+    ) {
         env.events().publish(
             (symbol_short!("accbooked"),),
             (booking_id, event_id, attendee, accommodation_type),
@@ -526,10 +533,8 @@ pub struct VenueLayoutCreated;
 
 impl VenueLayoutCreated {
     pub fn emit(env: &Env, event_id: u64, sections: u32) {
-        env.events().publish(
-            (symbol_short!("vencreate"),),
-            (event_id, sections),
-        );
+        env.events()
+            .publish((symbol_short!("vencreate"),), (event_id, sections));
     }
 }
 
@@ -550,10 +555,8 @@ pub struct SeatHoldReleased;
 
 impl SeatHoldReleased {
     pub fn emit(env: &Env, event_id: u64, seat_id: String) {
-        env.events().publish(
-            (symbol_short!("seatrele"),),
-            (event_id, seat_id),
-        );
+        env.events()
+            .publish((symbol_short!("seatrele"),), (event_id, seat_id));
     }
 }
 
@@ -566,10 +569,8 @@ pub struct EventCurrencySet;
 
 impl EventCurrencySet {
     pub fn emit(env: &Env, event_id: u64, currency: String) {
-        env.events().publish(
-            (symbol_short!("curset"),),
-            (event_id, currency),
-        );
+        env.events()
+            .publish((symbol_short!("curset"),), (event_id, currency));
     }
 }
 
@@ -578,10 +579,8 @@ pub struct OraclePriceUpdated;
 
 impl OraclePriceUpdated {
     pub fn emit(env: &Env, currency: String, price: i128, timestamp: u64) {
-        env.events().publish(
-            (symbol_short!("oracleprc"),),
-            (currency, price, timestamp),
-        );
+        env.events()
+            .publish((symbol_short!("oracleprc"),), (currency, price, timestamp));
     }
 }
 
@@ -604,7 +603,14 @@ impl InsurancePurchased {
     ) {
         env.events().publish(
             (symbol_short!("insbuy"),),
-            (policy_id, ticket_id, event_id, holder, premium_paid, coverage_amount),
+            (
+                policy_id,
+                ticket_id,
+                event_id,
+                holder,
+                premium_paid,
+                coverage_amount,
+            ),
         );
     }
 }
@@ -624,7 +630,14 @@ impl InsuranceClaimProcessed {
     ) {
         env.events().publish(
             (symbol_short!("insclaim"),),
-            (policy_id, ticket_id, event_id, claimant, claim_amount, reason),
+            (
+                policy_id,
+                ticket_id,
+                event_id,
+                claimant,
+                claim_amount,
+                reason,
+            ),
         );
     }
 }
@@ -660,7 +673,14 @@ impl ReviewSubmitted {
     ) {
         env.events().publish(
             (symbol_short!("revsubmt"),),
-            (review_id, event_id, reviewer, organizer, rating, attendance_verified),
+            (
+                review_id,
+                event_id,
+                reviewer,
+                organizer,
+                rating,
+                attendance_verified,
+            ),
         );
     }
 }
@@ -682,10 +702,8 @@ pub struct AttendanceVerificationFailed;
 
 impl AttendanceVerificationFailed {
     pub fn emit(env: &Env, review_id: u64, reviewer: Address) {
-        env.events().publish(
-            (symbol_short!("attfail"),),
-            (review_id, reviewer),
-        );
+        env.events()
+            .publish((symbol_short!("attfail"),), (review_id, reviewer));
     }
 }
 
@@ -702,7 +720,12 @@ impl ReputationUpdated {
     ) {
         env.events().publish(
             (symbol_short!("repupdt"),),
-            (organizer, reputation_score, average_rating_x100, total_reviews),
+            (
+                organizer,
+                reputation_score,
+                average_rating_x100,
+                total_reviews,
+            ),
         );
     }
 }
@@ -725,7 +748,13 @@ impl UpgradeProposed {
     ) {
         env.events().publish(
             (symbol_short!("upgprop"),),
-            (proposal_id, proposer, new_wasm_hash, description, voting_deadline),
+            (
+                proposal_id,
+                proposer,
+                new_wasm_hash,
+                description,
+                voting_deadline,
+            ),
         );
     }
 }
@@ -774,7 +803,12 @@ impl UpgradeGovernanceConfigUpdated {
     ) {
         env.events().publish(
             (symbol_short!("upgcfg"),),
-            (admin, voting_period_seconds, required_approval_percentage, member_count),
+            (
+                admin,
+                voting_period_seconds,
+                required_approval_percentage,
+                member_count,
+            ),
         );
     }
 }
@@ -797,7 +831,13 @@ impl CarbonFootprintCalculated {
     ) {
         env.events().publish(
             (symbol_short!("carboncal"),),
-            (event_id, total_footprint_kg, venue_kg, attendance_kg, travel_kg),
+            (
+                event_id,
+                total_footprint_kg,
+                venue_kg,
+                attendance_kg,
+                travel_kg,
+            ),
         );
     }
 }
@@ -817,7 +857,14 @@ impl CarbonOffsetPurchased {
     ) {
         env.events().publish(
             (symbol_short!("carbonpur"),),
-            (purchase_id, event_id, purchaser, offset_amount_kg, cost, project_id),
+            (
+                purchase_id,
+                event_id,
+                purchaser,
+                offset_amount_kg,
+                cost,
+                project_id,
+            ),
         );
     }
 }
@@ -836,7 +883,13 @@ impl EnvironmentalImpactUpdated {
     ) {
         env.events().publish(
             (symbol_short!("envimp"),),
-            (event_id, total_footprint_kg, total_offset_kg, net_impact_kg, neutral),
+            (
+                event_id,
+                total_footprint_kg,
+                total_offset_kg,
+                net_impact_kg,
+                neutral,
+            ),
         );
     }
 }
@@ -886,16 +939,9 @@ impl BlockchainIdentityVerified {
 pub struct IdentityCredentialRevoked;
 
 impl IdentityCredentialRevoked {
-    pub fn emit(
-        env: &Env,
-        credential_id: u64,
-        subject: Address,
-        admin: Address,
-    ) {
-        env.events().publish(
-            (symbol_short!("idrevok"),),
-            (credential_id, subject, admin),
-        );
+    pub fn emit(env: &Env, credential_id: u64, subject: Address, admin: Address) {
+        env.events()
+            .publish((symbol_short!("idrevok"),), (credential_id, subject, admin));
     }
 }
 
@@ -918,7 +964,14 @@ impl CrossChainTransferInitiated {
     ) {
         env.events().publish(
             (symbol_short!("cctinit"),),
-            (transfer_id, ticket_id, event_id, sender, source_chain, target_chain),
+            (
+                transfer_id,
+                ticket_id,
+                event_id,
+                sender,
+                source_chain,
+                target_chain,
+            ),
         );
     }
 }
@@ -927,13 +980,7 @@ impl CrossChainTransferInitiated {
 pub struct BridgeTransactionValidated;
 
 impl BridgeTransactionValidated {
-    pub fn emit(
-        env: &Env,
-        transfer_id: u64,
-        tx_hash: String,
-        valid: bool,
-        validator: Address,
-    ) {
+    pub fn emit(env: &Env, transfer_id: u64, tx_hash: String, valid: bool, validator: Address) {
         env.events().publish(
             (symbol_short!("brgval"),),
             (transfer_id, tx_hash, valid, validator),

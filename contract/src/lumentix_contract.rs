@@ -13,10 +13,9 @@ use crate::events::{
     IdentityCredentialRevoked, InsuranceClaimProcessed, InsurancePoolUpdated, InsurancePurchased,
     OraclePriceUpdated, PlatformFeeRecipientUpdated, PlatformFeeUpdated, PlatformFeesWithdrawn,
     ProtocolFeeQueried, ReputationUpdated, ReviewSubmitted, SeatHoldReleased, SeatSelected,
-    TicketPurchased, TicketRefunded, TicketRevoked, TicketTransferred, TicketUsed,
-    UpgradeExecuted, UpgradeGovernanceConfigUpdated, UpgradeProposed, UpgradeVoteCast,
-    VenueLayoutCreated, VipTierCreated, VipTicketAssigned, WaitlistAvailabilityNotified,
-    WaitlistJoined,
+    TicketPurchased, TicketRefunded, TicketRevoked, TicketTransferred, TicketUsed, UpgradeExecuted,
+    UpgradeGovernanceConfigUpdated, UpgradeProposed, UpgradeVoteCast, VenueLayoutCreated,
+    VipTicketAssigned, VipTierCreated, WaitlistAvailabilityNotified, WaitlistJoined,
 };
 use crate::storage;
 use crate::types::{
@@ -28,7 +27,7 @@ use crate::types::{
     VenueLayout, VenueSection, VipTier, WaitlistOffer, PERSISTENT_LIFETIME,
 };
 use crate::validation;
-use soroban_sdk::{contract, contractimpl, Address, BytesN, Env, String, Vec, Map};
+use soroban_sdk::{contract, contractimpl, Address, BytesN, Env, Map, String, Vec};
 
 #[contract]
 pub struct LumentixContract;
@@ -280,7 +279,13 @@ impl LumentixContract {
         storage::set_event(&env, event_id, &event);
 
         // Emit EventStatusChanged event
-        EventStatusChanged::emit(&env, event_id, caller.clone(), old_status.clone(), new_status.clone());
+        EventStatusChanged::emit(
+            &env,
+            event_id,
+            caller.clone(),
+            old_status.clone(),
+            new_status.clone(),
+        );
 
         // Emit GenericEventStateTransition event for universal state transition tracking
         GenericEventStateTransition::emit(&env, event_id, caller, old_status, new_status);
@@ -587,7 +592,11 @@ impl LumentixContract {
     }
 
     /// Pause ticket sales for an event. Only the organizer can pause.
-    pub fn pause_ticket_sales(env: Env, event_id: u64, organizer: Address) -> Result<(), LumentixError> {
+    pub fn pause_ticket_sales(
+        env: Env,
+        event_id: u64,
+        organizer: Address,
+    ) -> Result<(), LumentixError> {
         organizer.require_auth();
 
         let mut event = storage::get_event(&env, event_id)?;
@@ -686,7 +695,11 @@ impl LumentixContract {
 
     /// Mark multiple tickets as used in a single transaction.
     /// Only the event organizer can use tickets. All tickets must belong to the same organizer's event.
-    pub fn batch_use_tickets(env: Env, ticket_ids: Vec<u64>, caller: Address) -> Result<(), LumentixError> {
+    pub fn batch_use_tickets(
+        env: Env,
+        ticket_ids: Vec<u64>,
+        caller: Address,
+    ) -> Result<(), LumentixError> {
         caller.require_auth();
 
         let mut by_event = Map::<u64, Vec<u64>>::new(&env);
@@ -885,7 +898,13 @@ impl LumentixContract {
         EventCancelled::emit(&env, event_id, organizer.clone(), event.tickets_sold);
 
         // Emit GenericEventStateTransition event for universal state transition tracking
-        GenericEventStateTransition::emit(&env, event_id, organizer, old_status, EventStatus::Cancelled);
+        GenericEventStateTransition::emit(
+            &env,
+            event_id,
+            organizer,
+            old_status,
+            EventStatus::Cancelled,
+        );
 
         Ok(())
     }
@@ -921,7 +940,13 @@ impl LumentixContract {
         EventCompleted::emit(&env, event_id, organizer.clone(), event.tickets_sold);
 
         // Emit GenericEventStateTransition event for universal state transition tracking
-        GenericEventStateTransition::emit(&env, event_id, organizer, old_status, EventStatus::Completed);
+        GenericEventStateTransition::emit(
+            &env,
+            event_id,
+            organizer,
+            old_status,
+            EventStatus::Completed,
+        );
 
         Ok(())
     }
@@ -1013,7 +1038,11 @@ impl LumentixContract {
 
         // Demand metric: purchases per hour over a caller-supplied analysis window.
         if recent_purchases > 0 {
-            let window = if window_seconds == 0 { 1 } else { window_seconds };
+            let window = if window_seconds == 0 {
+                1
+            } else {
+                window_seconds
+            };
             let velocity_per_hour = (recent_purchases as u64).saturating_mul(3600) / window;
 
             let demand_multiplier_bps = if velocity_per_hour >= 50 {
@@ -1093,7 +1122,9 @@ impl LumentixContract {
             .max_tickets
             .saturating_sub(event.tickets_sold.saturating_add(reserved));
 
-        Ok(Self::process_waitlist_queue_internal(&env, event_id, available))
+        Ok(Self::process_waitlist_queue_internal(
+            &env, event_id, available,
+        ))
     }
 
     /// Notify a specific waitlist member that tickets are available.
@@ -1184,7 +1215,6 @@ impl LumentixContract {
     /// Returns an empty vector if no matching events exist.
     /// No auth required.
     pub fn get_events_by_status(env: Env, status: EventStatus) -> Vec<Event> {
-
         let mut events = Vec::new(&env);
         let next_event_id = storage::get_next_event_id(&env);
         let mut event_id: u64 = 1;
@@ -1478,8 +1508,6 @@ impl LumentixContract {
 
         tickets
     }
-
-
 
     /// Extend the TTL of an event. Only the organizer can call this.
     pub fn bump_event_ttl(env: Env, event_id: u64) -> Result<(), LumentixError> {
@@ -1783,7 +1811,11 @@ impl LumentixContract {
     /// Emits AdminChanged event with old and new admin addresses.
     /// Fails with Unauthorized if caller is not the current admin.
     /// Fails with InvalidAddress if new_admin is the same as current admin.
-    pub fn update_platform_fee_recipient(env: Env, admin: Address, new_admin: Address) -> Result<(), LumentixError> {
+    pub fn update_platform_fee_recipient(
+        env: Env,
+        admin: Address,
+        new_admin: Address,
+    ) -> Result<(), LumentixError> {
         admin.require_auth();
 
         let current_admin = storage::get_admin(&env);
@@ -1858,10 +1890,7 @@ impl LumentixContract {
     /// Get the addresses of all checked-in (used ticket) attendees for an event.
     /// Verifies the event exists, then iterates all tickets collecting owners of
     /// used tickets matching event_id. Deduplicates so each address appears once.
-    pub fn get_event_attendees(
-        env: Env,
-        event_id: u64,
-    ) -> Result<Vec<Address>, LumentixError> {
+    pub fn get_event_attendees(env: Env, event_id: u64) -> Result<Vec<Address>, LumentixError> {
         // Verify event exists
         let _ = storage::get_event(&env, event_id)?;
 
@@ -1913,16 +1942,20 @@ impl LumentixContract {
             organizer,
             name,
             String::from_str(&env, "Virtual event with streaming"), // description
-            String::from_str(&env, "Online"), // location
+            String::from_str(&env, "Online"),                       // location
             start_time,
             end_time,
             ticket_price,
-            max_tickets
+            max_tickets,
         )?;
 
         let url_key = (soroban_sdk::symbol_short!("STRM_URL"), event_id);
         env.storage().persistent().set(&url_key, &streaming_url);
-        env.storage().persistent().extend_ttl(&url_key, crate::types::PERSISTENT_LIFETIME, crate::types::PERSISTENT_LIFETIME);
+        env.storage().persistent().extend_ttl(
+            &url_key,
+            crate::types::PERSISTENT_LIFETIME,
+            crate::types::PERSISTENT_LIFETIME,
+        );
 
         Ok(event_id)
     }
@@ -1943,7 +1976,11 @@ impl LumentixContract {
 
         let access_key = (soroban_sdk::symbol_short!("STRM_ACC"), event_id, user);
         env.storage().persistent().set(&access_key, &has_access);
-        env.storage().persistent().extend_ttl(&access_key, crate::types::PERSISTENT_LIFETIME, crate::types::PERSISTENT_LIFETIME);
+        env.storage().persistent().extend_ttl(
+            &access_key,
+            crate::types::PERSISTENT_LIFETIME,
+            crate::types::PERSISTENT_LIFETIME,
+        );
         Ok(())
     }
 
@@ -1955,7 +1992,11 @@ impl LumentixContract {
     ) -> Result<(), LumentixError> {
         user.require_auth();
 
-        let access_key = (soroban_sdk::symbol_short!("STRM_ACC"), event_id, user.clone());
+        let access_key = (
+            soroban_sdk::symbol_short!("STRM_ACC"),
+            event_id,
+            user.clone(),
+        );
         let has_access: bool = env.storage().persistent().get(&access_key).unwrap_or(false);
         if !has_access {
             return Err(LumentixError::Unauthorized);
@@ -1963,7 +2004,11 @@ impl LumentixContract {
 
         let att_key = (soroban_sdk::symbol_short!("VIRT_ATT"), event_id, user);
         env.storage().persistent().set(&att_key, &true);
-        env.storage().persistent().extend_ttl(&att_key, crate::types::PERSISTENT_LIFETIME, crate::types::PERSISTENT_LIFETIME);
+        env.storage().persistent().extend_ttl(
+            &att_key,
+            crate::types::PERSISTENT_LIFETIME,
+            crate::types::PERSISTENT_LIFETIME,
+        );
         Ok(())
     }
 
@@ -2118,7 +2163,13 @@ impl LumentixContract {
         event.accessibility_visual = visual_total;
         storage::set_event(&env, event_id, &event);
 
-        AccessibilityInventoryUpdated::emit(&env, event_id, wheelchair_total, hearing_total, visual_total);
+        AccessibilityInventoryUpdated::emit(
+            &env,
+            event_id,
+            wheelchair_total,
+            hearing_total,
+            visual_total,
+        );
 
         Ok(())
     }
@@ -2216,7 +2267,13 @@ impl LumentixContract {
 
         storage::set_accessibility_inventory(&env, event_id, &inv);
 
-        AccessibilityInventoryUpdated::emit(&env, event_id, wheelchair_available, hearing_available, visual_available);
+        AccessibilityInventoryUpdated::emit(
+            &env,
+            event_id,
+            wheelchair_available,
+            hearing_available,
+            visual_available,
+        );
 
         Ok(())
     }
@@ -2371,16 +2428,18 @@ impl LumentixContract {
         config.last_updated = env.ledger().timestamp();
         storage::set_currency_config(&env, &currency, &config);
 
-        OraclePriceUpdated::emit(&env, currency.clone(), new_oracle_price, env.ledger().timestamp());
+        OraclePriceUpdated::emit(
+            &env,
+            currency.clone(),
+            new_oracle_price,
+            env.ledger().timestamp(),
+        );
 
         Self::convert_price(env, currency, to_currency, amount)
     }
 
     /// Get the currency config for a given code.
-    pub fn get_currency_config(
-        env: Env,
-        code: String,
-    ) -> Result<CurrencyConfig, LumentixError> {
+    pub fn get_currency_config(env: Env, code: String) -> Result<CurrencyConfig, LumentixError> {
         storage::get_currency_config(&env, &code)
     }
 
@@ -2537,10 +2596,7 @@ impl LumentixContract {
     }
 
     /// Get the venue layout for an event.
-    pub fn get_venue_layout(
-        env: Env,
-        event_id: u64,
-    ) -> Result<VenueLayout, LumentixError> {
+    pub fn get_venue_layout(env: Env, event_id: u64) -> Result<VenueLayout, LumentixError> {
         storage::get_venue_layout(&env, event_id)
     }
 
@@ -2639,25 +2695,54 @@ impl LumentixContract {
         let mut buf = [0u8; 64];
         let mut i = 0;
         for b in sec.iter() {
-            if i < 62 { buf[i] = b; i += 1; }
+            if i < 62 {
+                buf[i] = b;
+                i += 1;
+            }
         }
-        buf[i] = b'-'; i += 1;
+        buf[i] = b'-';
+        i += 1;
         let r_str = match row {
-            0 => "0", 1 => "1", 2 => "2", 3 => "3", 4 => "4", 5 => "5",
-            6 => "6", 7 => "7", 8 => "8", 9 => "9", 10 => "10",
+            0 => "0",
+            1 => "1",
+            2 => "2",
+            3 => "3",
+            4 => "4",
+            5 => "5",
+            6 => "6",
+            7 => "7",
+            8 => "8",
+            9 => "9",
+            10 => "10",
             _ => "0",
         };
         for b in r_str.bytes() {
-            if i < 63 { buf[i] = b; i += 1; }
+            if i < 63 {
+                buf[i] = b;
+                i += 1;
+            }
         }
-        buf[i] = b'-'; i += 1;
+        buf[i] = b'-';
+        i += 1;
         let n_str = match number {
-            0 => "0", 1 => "1", 2 => "2", 3 => "3", 4 => "4", 5 => "5",
-            6 => "6", 7 => "7", 8 => "8", 9 => "9", 10 => "10",
+            0 => "0",
+            1 => "1",
+            2 => "2",
+            3 => "3",
+            4 => "4",
+            5 => "5",
+            6 => "6",
+            7 => "7",
+            8 => "8",
+            9 => "9",
+            10 => "10",
             _ => "0",
         };
         for b in n_str.bytes() {
-            if i < 64 { buf[i] = b; i += 1; }
+            if i < 64 {
+                buf[i] = b;
+                i += 1;
+            }
         }
         let valid = core::str::from_utf8(&buf[..i]).unwrap_or("");
         String::from_str(env, valid)
@@ -2739,7 +2824,12 @@ impl LumentixContract {
 
         // Emit InsurancePoolUpdated event
         let pool = storage::get_insurance_pool(&env);
-        InsurancePoolUpdated::emit(&env, pool.total_balance, pool.total_policies, pool.total_claims_paid);
+        InsurancePoolUpdated::emit(
+            &env,
+            pool.total_balance,
+            pool.total_policies,
+            pool.total_claims_paid,
+        );
 
         Ok(policy_id)
     }
@@ -2789,7 +2879,11 @@ impl LumentixContract {
         // Transfer coverage amount to claimant
         if let Ok(token_address) = storage::get_token_result(&env) {
             let token_client = soroban_sdk::token::Client::new(&env, &token_address);
-            token_client.transfer(&env.current_contract_address(), &claimant, &policy.coverage_amount);
+            token_client.transfer(
+                &env.current_contract_address(),
+                &claimant,
+                &policy.coverage_amount,
+            );
         }
 
         // Mark policy as claim processed
@@ -2810,7 +2904,12 @@ impl LumentixContract {
 
         // Emit InsurancePoolUpdated event
         let pool = storage::get_insurance_pool(&env);
-        InsurancePoolUpdated::emit(&env, pool.total_balance, pool.total_policies, pool.total_claims_paid);
+        InsurancePoolUpdated::emit(
+            &env,
+            pool.total_balance,
+            pool.total_policies,
+            pool.total_claims_paid,
+        );
 
         Ok(())
     }
@@ -2995,10 +3094,7 @@ impl LumentixContract {
     ///
     /// Returns `true` if all checks pass, `false` otherwise.
     /// Emits `AttendanceVerified` on success or `AttendanceVerificationFailed` on failure.
-    pub fn validate_reviewer_attendance(
-        env: Env,
-        review_id: u64,
-    ) -> Result<bool, LumentixError> {
+    pub fn validate_reviewer_attendance(env: Env, review_id: u64) -> Result<bool, LumentixError> {
         let review = storage::get_review(&env, review_id)?;
 
         // Already verified — idempotent
@@ -3011,9 +3107,7 @@ impl LumentixContract {
         let verified = match ticket_result {
             Err(_) => false,
             Ok(ticket) => {
-                ticket.owner == review.reviewer
-                    && ticket.event_id == review.event_id
-                    && ticket.used
+                ticket.owner == review.reviewer && ticket.event_id == review.event_id && ticket.used
             }
         };
 
@@ -3108,10 +3202,7 @@ impl LumentixContract {
     }
 
     /// Get the reputation record for an organizer.
-    pub fn get_organizer_reputation(
-        env: Env,
-        organizer: Address,
-    ) -> OrganizerReputation {
+    pub fn get_organizer_reputation(env: Env, organizer: Address) -> OrganizerReputation {
         storage::get_organizer_reputation(&env, &organizer)
     }
 
@@ -3372,8 +3463,9 @@ impl LumentixContract {
         }
 
         // Calculate required votes
-        let required_yes =
-            (proposal.total_voters as u64 * config.required_approval_percentage as u64 / 100) as u32;
+        let required_yes = (proposal.total_voters as u64
+            * config.required_approval_percentage as u64
+            / 100) as u32;
         if proposal.yes_votes < required_yes || required_yes == 0 {
             return Err(LumentixError::UpgradeInsufficientVotes);
         }
@@ -3385,19 +3477,15 @@ impl LumentixContract {
         storage::set_upgrade_proposal(&env, proposal_id, &updated);
 
         // Deploy upgrade
-        env.deployer().update_current_contract_wasm(proposal.new_wasm_hash.clone());
+        env.deployer()
+            .update_current_contract_wasm(proposal.new_wasm_hash.clone());
 
         // Mark as executed
         let mut executed = updated;
         executed.state = UpgradeState::Executed;
         storage::set_upgrade_proposal(&env, proposal_id, &executed);
 
-        UpgradeExecuted::emit(
-            &env,
-            proposal_id,
-            executor,
-            proposal.new_wasm_hash,
-        );
+        UpgradeExecuted::emit(&env, proposal_id, executor, proposal.new_wasm_hash);
 
         Ok(())
     }
@@ -3416,11 +3504,7 @@ impl LumentixContract {
     }
 
     /// Get a vote record for a specific proposal and voter
-    pub fn get_upgrade_vote(
-        env: Env,
-        proposal_id: u64,
-        voter: Address,
-    ) -> Option<UpgradeVote> {
+    pub fn get_upgrade_vote(env: Env, proposal_id: u64, voter: Address) -> Option<UpgradeVote> {
         storage::get_upgrade_vote(&env, proposal_id, &voter)
     }
 
@@ -3456,8 +3540,7 @@ impl LumentixContract {
         let attendance_emission_per_person: i128 = 5; // 5 kg CO2e per attendee
         let travel_emission_per_km_per_person: i128 = 255; // grams = 0.255 kg per km per person
 
-        let venue_footprint =
-            (venue_size_sqm as i128).saturating_mul(venue_emission_per_sqm);
+        let venue_footprint = (venue_size_sqm as i128).saturating_mul(venue_emission_per_sqm);
         let attendance_footprint =
             (expected_attendance as i128).saturating_mul(attendance_emission_per_person);
         let travel_footprint = (expected_attendance as i128)
@@ -3465,9 +3548,7 @@ impl LumentixContract {
             .saturating_mul(travel_emission_per_km_per_person)
             / 1000; // convert grams to kg
 
-        let total = venue_footprint
-            + attendance_footprint
-            + travel_footprint;
+        let total = venue_footprint + attendance_footprint + travel_footprint;
 
         let footprint = CarbonFootprint {
             event_id,
@@ -3569,10 +3650,7 @@ impl LumentixContract {
 
     /// Track and return the current environmental impact for an event.
     /// Can be called by anyone to check neutrality status.
-    pub fn track_environmental_impact(
-        env: Env,
-        event_id: u64,
-    ) -> EnvironmentalImpact {
+    pub fn track_environmental_impact(env: Env, event_id: u64) -> EnvironmentalImpact {
         storage::get_environmental_impact(&env, event_id)
     }
 
@@ -3585,10 +3663,7 @@ impl LumentixContract {
     }
 
     /// Get the carbon footprint for an event
-    pub fn get_carbon_footprint(
-        env: Env,
-        event_id: u64,
-    ) -> Option<CarbonFootprint> {
+    pub fn get_carbon_footprint(env: Env, event_id: u64) -> Option<CarbonFootprint> {
         storage::get_carbon_footprint(&env, event_id)
     }
 
@@ -3698,13 +3773,7 @@ impl LumentixContract {
             return Err(LumentixError::IdentityCredentialExpired);
         }
 
-        BlockchainIdentityVerified::emit(
-            &env,
-            credential_id,
-            subject,
-            credential.provider,
-            true,
-        );
+        BlockchainIdentityVerified::emit(&env, credential_id, subject, credential.provider, true);
 
         Ok(true)
     }
@@ -3827,11 +3896,7 @@ impl LumentixContract {
     }
 
     /// Pause or unpause the bridge functionality (admin only)
-    pub fn set_bridge_paused(
-        env: Env,
-        admin: Address,
-        paused: bool,
-    ) -> Result<(), LumentixError> {
+    pub fn set_bridge_paused(env: Env, admin: Address, paused: bool) -> Result<(), LumentixError> {
         admin.require_auth();
 
         let stored_admin = storage::get_admin(&env);
@@ -3979,13 +4044,7 @@ impl LumentixContract {
         transfer.bridge_tx_hash = Some(tx_hash.clone());
         storage::set_cross_chain_transfer(&env, transfer_id, &transfer);
 
-        BridgeTransactionValidated::emit(
-            &env,
-            transfer_id,
-            tx_hash,
-            true,
-            validator,
-        );
+        BridgeTransactionValidated::emit(&env, transfer_id, tx_hash, true, validator);
 
         Ok(())
     }
@@ -4056,10 +4115,7 @@ impl LumentixContract {
     }
 
     /// Get a bridge transaction by hash
-    pub fn get_bridge_transaction(
-        env: Env,
-        tx_hash: String,
-    ) -> Option<BridgeTransaction> {
+    pub fn get_bridge_transaction(env: Env, tx_hash: String) -> Option<BridgeTransaction> {
         storage::get_bridge_transaction(&env, &tx_hash)
     }
 
